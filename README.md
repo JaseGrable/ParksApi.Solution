@@ -1,8 +1,8 @@
-# (Application Name)
+# National Parks API
 
-#### (Brief Description of Application)
+#### Week 6 C# project for Epicodus Bootcamp. Building an API
 
-#### By (Your Name Here)
+#### By Jase Grable
 
 ## Technologies Used
 
@@ -27,5 +27,7 @@
 - _should go here_
 
 ## License
+
 # CSharpTemplate
-This is a C# project template 
+
+This is a C# project template
