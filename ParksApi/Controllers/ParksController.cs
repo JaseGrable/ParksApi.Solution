@@ -1,3 +1,8 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ParksApi.Models;
@@ -8,18 +13,20 @@ namespace ParksApi.Controllers
     [ApiController]
     public class ParksController : ControllerBase
     {
-        private readonly ParksApiContext _db;
+        private readonly ParksApiContext _context;
 
-        public ParksController(ParksApiContext db)
+        public ParksController(ParksApiContext context)
         {
-            _db = db;
+            _context = context;
         }
 
-        // GET api/parks
+        // GET: api/Parks
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Park>>> Get(string name, string state, string type, string description)
+        public async Task<ActionResult<IEnumerable<Park>>> Get(string name, string state, string type, string description, int page = 1, int pageSize = 10)
         {
-            IQueryable<Park> query = _db.Parks.AsQueryable();
+
+            IQueryable<Park> query = _context.Parks.AsQueryable();
+
 
             if (name != null)
             {
@@ -41,43 +48,40 @@ namespace ParksApi.Controllers
                 query = query.Where(entry => entry.Description.Contains(description));
             }
 
-            return await query.ToListAsync();
+            int skip = (page - 1) * pageSize;
+
+            return await query.Skip(skip).Take(pageSize).ToListAsync();
         }
 
 
-
-        // GET api/parks/1
+        // GET: api/Parks/5
         [HttpGet("{id}")]
         public async Task<ActionResult<Park>> GetPark(int id)
         {
-            Park park = await _db.Parks.FindAsync(id);
+            var park = await _context.Parks.FindAsync(id);
+
             if (park == null)
             {
                 return NotFound();
             }
+
             return park;
         }
 
-        // POST api/parks
-        [HttpPost]
-        public async Task<ActionResult<Park>> Post(Park park)
-        {
-            _db.Parks.Add(park);
-            await _db.SaveChangesAsync();
-            return CreatedAtAction(nameof(GetPark), new { id = park.ParkId }, park);
-        }
-        // PUT api/parks/1
+        // PUT: api/Parks/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, Park park)
+        public async Task<IActionResult> PutPark(int id, Park park)
         {
             if (id != park.ParkId)
             {
                 return BadRequest();
             }
-            _db.Parks.Update(park);
+
+            _context.Entry(park).State = EntityState.Modified;
+
             try
             {
-                await _db.SaveChangesAsync();
+                await _context.SaveChangesAsync();
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -90,26 +94,50 @@ namespace ParksApi.Controllers
                     throw;
                 }
             }
+
+            return NoContent();
+        }
+
+        // POST: api/Parks
+        [HttpPost]
+        public async Task<ActionResult<Park>> PostPark(Park park)
+        {
+            _context.Parks.Add(park);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetPark", new { id = park.ParkId }, park);
+        }
+
+        // DELETE: api/Parks/5
+        [HttpDelete("{id}")]
+        public async Task<IActionResult> DeletePark(int id)
+        {
+            var park = await _context.Parks.FindAsync(id);
+            if (park == null)
+            {
+                return NotFound();
+            }
+
+            _context.Parks.Remove(park);
+            await _context.SaveChangesAsync();
+
             return NoContent();
         }
 
         private bool ParkExists(int id)
         {
-            return _db.Parks.Any(e => e.ParkId == id);
+            return _context.Parks.Any(e => e.ParkId == id);
         }
 
-        // DELETE api/parks/1
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> DeletePark(int id)
+        // GET: api/Parks/random
+        [HttpGet("random")]
+        public async Task<ActionResult<Park>> GetRandomPark()
         {
-            Park park = await _db.Parks.FindAsync(id);
-            if (park == null)
-            {
-                return NotFound();
-            }
-            _db.Parks.Remove(park);
-            await _db.SaveChangesAsync();
-            return NoContent();
+            var count = await _context.Parks.CountAsync();
+            var random = new Random();
+            var index = random.Next(count);
+            var park = await _context.Parks.Skip(index).FirstOrDefaultAsync();
+            return park;
         }
     }
 }
